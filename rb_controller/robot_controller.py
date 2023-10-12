@@ -9,6 +9,8 @@ class RobotController(Node):
     # Parameter
     __FOLLOW_MODE_BTN = 1
     __TELEOP_MODE_BTN = 2
+    follow_mode_flag = True
+    teleop_mode_flag = True
 
     def __init__(self):
         super().__init__('robot_controller')
@@ -22,20 +24,18 @@ class RobotController(Node):
         self.subscription  # prevent unused variable warning
 
     def button_read(self, joy_msg):
-        follow_mode_flag = True
-        teleop_mode_flag = True
         # Follow mode btn
-        if joy_msg.buttons[self.__FOLLOW_MODE_BTN] == 1 and follow_mode_flag :
-            follow_mode_flag = False
+        if joy_msg.buttons[self.__FOLLOW_MODE_BTN] == 1 and self.follow_mode_flag :
+            self.follow_mode_flag = False
             self.get_logger().info('Follow_mode')
-        else :
-            follow_mode_flag = True
+        elif joy_msg.buttons[self.__FOLLOW_MODE_BTN] == 0 and not(self.follow_mode_flag):
+            self.follow_mode_flag = True
         # Teleop operate mode btn
-        if joy_msg.buttons[self.__TELEOP_MODE_BTN] == 1 and teleop_mode_flag :
-            teleop_mode_flag = False
+        if joy_msg.buttons[self.__TELEOP_MODE_BTN] == 1 and self.teleop_mode_flag :
+            self.teleop_mode_flag = False
             self.get_logger().info('Teleop_mode')
-        else:
-            teleop_mode_flag = True
+        elif joy_msg.buttons[self.__TELEOP_MODE_BTN] == 0 and not(self.teleop_mode_flag):
+            self.teleop_mode_flag = True
 
     def timer_callback(self):
         msga = String()
