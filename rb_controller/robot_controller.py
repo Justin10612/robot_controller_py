@@ -25,9 +25,10 @@ class RobotController(Node):
     def __init__(self):
         super().__init__('robot_controller')
         # Create publisher
-        self.idle_bool_pub = self.create_publisher(Bool, 'idle_bool', 10)
-        self.follow_bool_pub = self.create_publisher(Bool, 'follow_bool', 10)
-        self.teleop_bool_pub = self.create_publisher(Bool, 'teleop_bool', 10)
+        self.idle_bool_pub_ = self.create_publisher(Bool, 'idle_bool', 10)
+        self.follow_bool_pub_ = self.create_publisher(Bool, 'follow_bool', 10)
+        self.teleop_bool_pub_ = self.create_publisher(Bool, 'teleop_bool', 10)
+        self.robot_state_pub_ = self.create_publisher(String, 'robot_mode', 10)
         # Create subscriber
         self.subscription = self.create_subscription(Joy, 'joy', self.button_read, 10)
         self.subscription  # prevent unused variable warning
@@ -63,6 +64,7 @@ class RobotController(Node):
             self.teleop_btn_flag = True
         else:
             self.teleop_btn_state = False
+
         # ############## FSM ##############
         if self.robot_state=='IDLE' :
             # Switch to Follow Mode
@@ -77,6 +79,9 @@ class RobotController(Node):
                 self.robot_state = 'IDLE'
 
         self.get_logger().info('Robot State: "%s "' % self.robot_state)
+        msg = String()
+        msg.data = self.robot_state
+        self.robot_state_pub_.publish(msg)
 
 def main(args=None):
     rclpy.init(args=args)
