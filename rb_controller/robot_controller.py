@@ -66,7 +66,13 @@ class RobotController(Node):
             self.teleop_btn_state = False
 
         # ############## FSM ##############
+        teleop_msg = Bool()
+        follow_msg = Bool()
+        idle_msg = Bool()
         if self.robot_state=='IDLE' :
+            idle_msg.data = True
+            follow_msg.data = False
+            teleop_msg.data = False
             # Switch to Follow Mode
             if self.follow_btn_state==True and self.target_state==True:
                 self.robot_state = 'FOLLOW'
@@ -74,14 +80,23 @@ class RobotController(Node):
             if self.teleop_btn_state==True:
                 self.robot_state = 'TELEOP'
         else:
+            idle_msg.data = False
+            if self.robot_state=='FOLLOW' :
+                follow_msg.data = True
+            if self.robot_state=='TELEOP' :
+                teleop_msg.data = True
             # Go back to Idel Mode
             if self.idle_btn_state == True:
                 self.robot_state = 'IDLE'
 
         self.get_logger().info('Robot State: "%s "' % self.robot_state)
-        msg = String()
-        msg.data = self.robot_state
-        self.robot_state_pub_.publish(msg)
+        mode_msg = String()
+        mode_msg.data = self.robot_state
+        self.robot_state_pub_.publish(mode_msg)
+        # mux bool
+        self.idle_bool_pub_.publish(idle_msg)
+        self.follow_bool_pub_.publish(follow_msg)
+        self.teleop_bool_pub_.publish(teleop_msg)
 
 def main(args=None):
     rclpy.init(args=args)
