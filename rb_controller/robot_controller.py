@@ -12,9 +12,10 @@ class RobotController(Node):
     __TELEOP_MODE_BTN = 2 #b
     __IDLE_MODE_BTN = 3 #y
     # Mode
-    follow_mode_state = False
-    teleop_mode_state = False
-    idle_mode_state = True
+    follow_btn_state = False
+    teleop_btn_state = False
+    idle_btn_state = False
+    robot_state = 'IDLE'
     target_state = True
     # Button State
     follow_btn_flag = True
@@ -37,36 +38,45 @@ class RobotController(Node):
             self.idle_btn_flag = False
             self.get_logger().info('IDLE_btn_pressed')
             # Clear status
-            self.idle_mode_state = True
-            self.follow_mode_state = False
-            self.teleop_mode_state = False
+            self.idle_btn_state = True
         elif joy_msg.buttons[self.__IDLE_MODE_BTN] == 0 and not(self.idle_btn_flag):
             self.idle_btn_flag = True
+        else:
+            self.idle_btn_state = False
         # ############# Follow btn btn ####################
         if joy_msg.buttons[self.__FOLLOW_MODE_BTN] == 1 and self.follow_btn_flag :
             self.follow_btn_flag = False
             self.get_logger().info('Follow_btn_pressed')
             # Change State
-            self.idle_mode_state = False
-            self.follow_mode_state = True
+            self.follow_btn_state = True
         elif joy_msg.buttons[self.__FOLLOW_MODE_BTN] == 0 and not(self.follow_btn_flag):
             self.follow_btn_flag = True
+        else:
+            self.follow_btn_state = False
         # ############# Teleop operate btn btn #############
         if joy_msg.buttons[self.__TELEOP_MODE_BTN] == 1 and self.teleop_btn_flag :
             self.teleop_btn_flag = False
             self.get_logger().info('Teleop_btn_pressed')
             # Change State
-            self.idle_mode_state = False
-            self.teleop_mode_state = True
+            self.teleop_btn_state = True
         elif joy_msg.buttons[self.__TELEOP_MODE_BTN] == 0 and not(self.teleop_btn_flag):
             self.teleop_btn_flag = True
+        else:
+            self.teleop_btn_state = False
+        # ############## FSM ##############
+        if self.robot_state=='IDLE' :
+            # Switch to Follow Mode
+            if self.follow_btn_state==True and self.target_state==True:
+                self.robot_state = 'FOLLOW'
+            # Switch to Teleoperating Mode
+            if self.teleop_btn_state==True:
+                self.robot_state = 'TELEOP'
+        else:
+            # Go back to Idel Mode
+            if self.idle_btn_state == True:
+                self.robot_state = 'IDLE'
 
-        if self.idle_mode_state==True :
-            self.get_logger().info('IDLE')
-        elif self.follow_mode_state==True and self.target_state==True and self.teleop_mode_state==False:
-            self.get_logger().info('FOLLOW')
-        elif self.teleop_mode_state==True and self.follow_mode_state==False:
-            self.get_logger().info('TELEOP')
+        self.get_logger().info('Robot State: "%s "' % self.robot_state)
 
 def main(args=None):
     rclpy.init(args=args)
