@@ -2,10 +2,19 @@ twist_mux:
   ros__parameters:
     topics:
       following:
-        topic:
-        timout:
-        priority:
+        topic: cmd_vel_follow
+        timeout: 0.5 
+        priority: 50
       joystick:
-        topic:
-        timout:
-        priority:
+        topic: cmd_vel_joystick
+        timeout: 0.5
+        priority: 100
+    locks:
+      follow_lock:
+        topic: follow_bool
+        timeout: 
+        pirority: 
+      teleop_lock:
+        topic: follow_bool
+        timeout: 
+        pirority: 

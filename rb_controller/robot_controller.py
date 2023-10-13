@@ -70,6 +70,7 @@ class RobotController(Node):
         follow_msg = Bool()
         idle_msg = Bool()
         if self.robot_state=='IDLE' :
+            # Set MUX boolean enable
             idle_msg.data = True
             follow_msg.data = False
             teleop_msg.data = False
@@ -80,6 +81,7 @@ class RobotController(Node):
             if self.teleop_btn_state==True:
                 self.robot_state = 'TELEOP'
         else:
+            # Set MUX boolean enable
             idle_msg.data = False
             if self.robot_state=='FOLLOW' :
                 follow_msg.data = True
