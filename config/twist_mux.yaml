@@ -5,26 +5,26 @@
 # - timeout : timeout in seconds to start discarding old messages, and use 0.0 speed instead
 # - priority: priority in the range [0, 255]; the higher the more priority over other topics
 
-/twist_mux:
+twist_mux:
   ros__parameters:
     topics:
-      following:
+      follow:
         topic: follow_cmd_vel
-        timeout: 0.5 
-        priority: 10
+        timeout: 0.5
+        priority: 150
       joystick:
         topic: joystick_cmd_vel
         timeout: 0.5
-        priority: 100
+        priority: 200
     locks:
-      follow_lock:
-        topic: follow_bool
-        timeout: 0.5
-        priority: 10
-      teleop_lock:
+      # follow:
+      #   topic: follow_bool
+      #   timeout: 0.0
+      #   priority: 100
+      joystick:
         topic: teleop_bool
-        timeout: 0.5
-        priority: 100
+        timeout: 0.0
+        priority: 200
       e_stop:
         topic: idle_bool
         timeout: 0.0

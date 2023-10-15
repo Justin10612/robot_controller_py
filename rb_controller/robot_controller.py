@@ -8,8 +8,8 @@ from sensor_msgs.msg import Joy
 
 class RobotController(Node):
     # Parameter
-    __FOLLOW_MODE_BTN = 1 #a
-    __TELEOP_MODE_BTN = 2 #b
+    __FOLLOW_MODE_BTN = 1 #B
+    __TELEOP_MODE_BTN = 0 #A
     __IDLE_MODE_BTN = 3 #y
     # Mode
     follow_btn_state = False
