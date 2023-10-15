@@ -1,20 +1,31 @@
-twist_mux:
+# Input topics handled/muxed.
+# For each topic:
+# - name    : name identifier to select the topic (*sub-namespace, see below)
+# - topic   : input topic of geometry_msgs::Twist type
+# - timeout : timeout in seconds to start discarding old messages, and use 0.0 speed instead
+# - priority: priority in the range [0, 255]; the higher the more priority over other topics
+
+/twist_mux:
   ros__parameters:
     topics:
       following:
-        topic: cmd_vel_follow
+        topic: follow_cmd_vel
         timeout: 0.5 
-        priority: 50
+        priority: 10
       joystick:
-        topic: cmd_vel_joystick
+        topic: joystick_cmd_vel
         timeout: 0.5
         priority: 100
     locks:
       follow_lock:
         topic: follow_bool
-        timeout: 
-        pirority: 
+        timeout: 0.5
+        priority: 10
       teleop_lock:
-        topic: follow_bool
-        timeout: 
-        pirority: 
+        topic: teleop_bool
+        timeout: 0.5
+        priority: 100
+      e_stop:
+        topic: idle_bool
+        timeout: 0.0
+        priority: 255
