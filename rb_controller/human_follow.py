@@ -13,6 +13,8 @@ class HumanFollower(Node):
     # Veriable
     target_angle = 0.0
     target_depth = 0.0
+    last_state = ''
+
 
     def __init__(self):
         super().__init__('human_follower')
@@ -33,29 +35,33 @@ class HumanFollower(Node):
         output_cmd_vel_msgs.angular.y = 0.0
         # Follow mode
         if mode_msg.data=='FOLLOW':
+            # Dummy Data for Testing
             output_cmd_vel_msgs.linear.x = 6.6
             output_cmd_vel_msgs.angular.z = 1.1
-            # self.get_logger().info('Start Follow')   
+            # self.get_logger().info('Start Follow')
+            self.follow_vel_pub_.publish(output_cmd_vel_msgs)
         else:
             # Zeroing
             output_cmd_vel_msgs.linear.x = 0.0
             output_cmd_vel_msgs.angular.z = 0.0
-        
-        self.follow_vel_pub_.publish(output_cmd_vel_msgs)
-        # self.get_logger().info('Follow cmd vel Published > <')
+            if self.last_state != mode_msg.data:
+                self.follow_vel_pub_.publish(output_cmd_vel_msgs)
+            # self.get_logger().info('Follow cmd vel Published > <')
+
+        self.last_state = mode_msg.data
     
+    def pose_read(self, pose_msgs):
+        human_x = pose_msgs.x
+        human_depth = pose_msgs.y
+        self.target_angle = (abs(human_x-640)/640)*43 # 43 = horizontal_FOV / 2
+        self.target_depth = human_depth / 1000.0
+
     def PID_controller(self, target, measure, kp, ki, kd):
         error = float(target - measure)
         error_sum += error
         output = kp*error + ki*error_sum + kd*(error-error_last)
         error_last = error
         return output
-
-    def pose_read(self, pose_msgs):
-        human_x = pose_msgs.x
-        human_depth = pose_msgs.y
-        self.target_angle = (abs(human_x-640)/640)*43 # 43 = horizontal_FOV / 2
-        self.target_depth = human_depth / 1000.0
         
 
 def main(args=None):

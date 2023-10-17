@@ -17,7 +17,7 @@ class RobotController(Node):
     idle_btn_state = False
     robot_state = 'IDLE'
     last_robot_state = 'IDLE'
-    target_state = True
+    target_status = False
     # Button State
     follow_btn_flag = True
     teleop_btn_flag = True
@@ -27,16 +27,19 @@ class RobotController(Node):
         super().__init__('robot_controller')
         # Create publisher
         self.idle_bool_pub_ = self.create_publisher(Bool, 'idle_bool', 10)
-        self.follow_bool_pub_ = self.create_publisher(Bool, 'follow_bool', 10)
         self.teleop_bool_pub_ = self.create_publisher(Bool, 'teleop_bool', 10)
         self.robot_state_pub_ = self.create_publisher(String, 'robot_mode', 10)
         # Create subscriber
-        self.subscription = self.create_subscription(Joy, 'joy', self.button_read, 10)
-        self.subscription  # prevent unused variable warning
+        self.joy_sub_ = self.create_subscription(Joy, 'joy', self.button_read, 10)
+        self.joy_sub_  # prevent unused variable warning
+        self.target_status_sub_ = self.create_subscription(Bool, 'target_status', self.target_status_read, 10)
+        self.target_status_sub_  # prevent unused variable warning
+        # Log Robot State
         self.get_logger().info('Robot State: "%s "' % self.robot_state)
 
     def button_read(self, joy_msg):
-        # ############# Idle operate mode btn #############
+        # ############# Button Reading #############
+        # Idle Mode Button
         if joy_msg.buttons[self.__IDLE_MODE_BTN] == 1 and self.idle_btn_flag :
             self.idle_btn_flag = False
             # self.get_logger().info('IDLE_btn_pressed')
@@ -46,7 +49,7 @@ class RobotController(Node):
             self.idle_btn_flag = True
         else:
             self.idle_btn_state = False
-        # ############# Follow btn btn ####################
+        # Follow Mode Button
         if joy_msg.buttons[self.__FOLLOW_MODE_BTN] == 1 and self.follow_btn_flag :
             self.follow_btn_flag = False
             # self.get_logger().info('Follow_btn_pressed')
@@ -56,7 +59,7 @@ class RobotController(Node):
             self.follow_btn_flag = True
         else:
             self.follow_btn_state = False
-        # ############# Teleop operate btn btn #############
+        # Teleop Mode Button
         if joy_msg.buttons[self.__TELEOP_MODE_BTN] == 1 and self.teleop_btn_flag :
             self.teleop_btn_flag = False
             # self.get_logger().info('Teleop_btn_pressed')
@@ -69,24 +72,21 @@ class RobotController(Node):
 
         # ############## FSM ##############
         teleop_msg = Bool()
-        follow_msg = Bool()
         idle_msg = Bool()
         if self.robot_state=='IDLE' :
-            # Set MUX boolean enable
+            # Mux Cut-off Output, Switch to E-STOP
             idle_msg.data = True
-            follow_msg.data = False
             teleop_msg.data = False
             # Switch to Follow Mode
-            if self.follow_btn_state==True and self.target_state==True:
+            if self.follow_btn_state==True :
+                # and self.target_status==True:
                 self.robot_state = 'FOLLOW'
             # Switch to Teleoperating Mode
             if self.teleop_btn_state==True:
                 self.robot_state = 'TELEOP'
         else:
-            # Set MUX boolean enable
             idle_msg.data = False
-            if self.robot_state=='FOLLOW' :
-                follow_msg.data = True
+            # Lcok the outout, Switch to joystick_cmd_vel
             if self.robot_state=='TELEOP' :
                 teleop_msg.data = True
             # Go back to Idel Mode
@@ -99,12 +99,15 @@ class RobotController(Node):
         self.robot_state_pub_.publish(mode_msg)
         # Publish mux bool
         self.idle_bool_pub_.publish(idle_msg)
-        self.follow_bool_pub_.publish(follow_msg)
         self.teleop_bool_pub_.publish(teleop_msg)
         # Log Robot_state
         if (self.last_robot_state != self.robot_state):
             self.get_logger().info('Robot State: "%s "' % self.robot_state)
         self.last_robot_state = self.robot_state
+
+    def target_status_read(self, msg):
+        self.target_status = msg.data
+        self.get_logger().info('Target_status: %b ' % self.target_status)
 
 def main(args=None):
     rclpy.init(args=args)
