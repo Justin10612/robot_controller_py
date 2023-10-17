@@ -47,7 +47,6 @@ class HumanFollower(Node):
             if self.last_state != mode_msg.data:
                 self.follow_vel_pub_.publish(output_cmd_vel_msgs)
             # self.get_logger().info('Follow cmd vel Published > <')
-
         self.last_state = mode_msg.data
     
     def pose_read(self, pose_msgs):

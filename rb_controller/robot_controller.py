@@ -27,7 +27,6 @@ class RobotController(Node):
         super().__init__('robot_controller')
         # Create publisher
         self.idle_bool_pub_ = self.create_publisher(Bool, 'idle_bool', 10)
-        self.teleop_bool_pub_ = self.create_publisher(Bool, 'teleop_bool', 10)
         self.robot_state_pub_ = self.create_publisher(String, 'robot_mode', 10)
         # Create subscriber
         self.joy_sub_ = self.create_subscription(Joy, 'joy', self.button_read, 10)
@@ -49,6 +48,7 @@ class RobotController(Node):
             self.idle_btn_flag = True
         else:
             self.idle_btn_state = False
+        
         # Follow Mode Button
         if joy_msg.buttons[self.__FOLLOW_MODE_BTN] == 1 and self.follow_btn_flag :
             self.follow_btn_flag = False
@@ -59,6 +59,7 @@ class RobotController(Node):
             self.follow_btn_flag = True
         else:
             self.follow_btn_state = False
+        
         # Teleop Mode Button
         if joy_msg.buttons[self.__TELEOP_MODE_BTN] == 1 and self.teleop_btn_flag :
             self.teleop_btn_flag = False
@@ -71,24 +72,25 @@ class RobotController(Node):
             self.teleop_btn_state = False
 
         # ############## FSM ##############
-        teleop_msg = Bool()
         idle_msg = Bool()
         if self.robot_state=='IDLE' :
             # Mux Cut-off Output, Switch to E-STOP
             idle_msg.data = True
-            teleop_msg.data = False
             # Switch to Follow Mode
-            if self.follow_btn_state==True :
-                # and self.target_status==True:
+            if self.follow_btn_state==True and self.target_status==True:
                 self.robot_state = 'FOLLOW'
             # Switch to Teleoperating Mode
             if self.teleop_btn_state==True:
                 self.robot_state = 'TELEOP'
         else:
             idle_msg.data = False
-            # Lcok the outout, Switch to joystick_cmd_vel
-            if self.robot_state=='TELEOP' :
-                teleop_msg.data = True
+            # 
+            if self.robot_state == 'FOLLOW' and self.target_status == False:
+                for i in range(50):
+                    if self.target_status: break
+                    if i==49: self.robot_state = 'IDLE'
+                    # sdd = str(i)
+                    self.get_logger().info('Count: "%d"' % i)
             # Go back to Idel Mode
             if self.idle_btn_state == True:
                 self.robot_state = 'IDLE'
@@ -97,9 +99,6 @@ class RobotController(Node):
         mode_msg = String()
         mode_msg.data = self.robot_state
         self.robot_state_pub_.publish(mode_msg)
-        # Publish mux bool
-        self.idle_bool_pub_.publish(idle_msg)
-        self.teleop_bool_pub_.publish(teleop_msg)
         # Log Robot_state
         if (self.last_robot_state != self.robot_state):
             self.get_logger().info('Robot State: "%s "' % self.robot_state)
@@ -107,7 +106,7 @@ class RobotController(Node):
 
     def target_status_read(self, msg):
         self.target_status = msg.data
-        self.get_logger().info('Target_status: %b ' % self.target_status)
+        # self.get_logger().info('Target_status: %b ' % self.target_status)
 
 def main(args=None):
     rclpy.init(args=args)
