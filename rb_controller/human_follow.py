@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-import simple_pid as PID
+from simple_pid import PID
 
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist
@@ -9,10 +9,10 @@ from geometry_msgs.msg import Vector3
 
 class HumanFollower(Node):
     # Constant
-    MIN_CHASE_DISTANCE = 50     # Unit:center-meter
-    MAX_CHASE_DISTANCE = 200    # Unit:center-meter
+    MIN_CHASE_DISTANCE = 0.5     # Unit:center-meter
+    MAX_CHASE_DISTANCE = 2    # Unit:center-meter
     # depth pid controller constant
-    DEPTH_kp = 0
+    DEPTH_kp = 0.2
     DEPTH_ki = 0
     DEPTH_kd = 0
     # angle pid controller constant
@@ -35,24 +35,24 @@ class HumanFollower(Node):
         self.human_pose_sub_ = self.create_subscription(Vector3, 'human_pose', self.pose_read, 10)
         self.human_pose_sub_  # prevent unused variable warning
         # PID controller setting
-        self.pid_angle = PID(self.ANGLE_kp, self.ANGLE_ki, self.ANGLE_kd, setpoint=0)
-        self.pid_angle.output_limits(0, 1000)
+        # self.pid_angle = PID(self.ANGLE_kp, self.ANGLE_ki, self.ANGLE_kd, setpoint=0)
+        # self.pid_angle.output_limits = (-1000, 1000)
         self.pid_depth = PID(self.DEPTH_kp, self.DEPTH_ki, self.DEPTH_kd, setpoint=0)
-        self.pid_depth.output_limits(0, 1000)
+        # self.pid_depth.output_limits = (-1000, 1000)
 
     def pose_read(self, pose_msgs):
         human_x = pose_msgs.x
-        human_depth = pose_msgs.y
+        # human_depth = 
         self.target_angle = (abs(human_x-640)/640)*43 # 43 = horizontal_FOV / 2
-        self.target_depth = human_depth / 1000.0
+        self.target_depth = pose_msgs.y
 
     def follow_mode(self, mode_msg):
         output_cmd_vel_msgs = Twist()
         # Make sure other veriables are zero
-        output_cmd_vel_msgs.linear.y = 0.0
-        output_cmd_vel_msgs.linear.z = 0.0
-        output_cmd_vel_msgs.angular.x = 0.0
-        output_cmd_vel_msgs.angular.y = 0.0
+        # output_cmd_vel_msgs.linear.y = 0.0
+        # output_cmd_vel_msgs.linear.z = 0.0
+        # output_cmd_vel_msgs.angular.x = 0.0
+        # output_cmd_vel_msgs.angular.y = 0.0
         # Follow mode
         if mode_msg.data=='FOLLOW':
             # Dummy Data for Testing
@@ -67,8 +67,9 @@ class HumanFollower(Node):
             else:
                 # In the chasing zone
                 # PID Controller Calculation
-                output_cmd_vel_msgs.linear.x = self.pid_angle(self.target_angle)
-                output_cmd_vel_msgs.angular.z = self.pid_depth(self.target_depth)
+                output_cmd_vel_msgs.linear.x = float(self.pid_depth(-self.target_depth))
+                # output_cmd_vel_msgs.angular.z = float(self.pid_angle(-self.target_angle))
+                self.get_logger().info('linear_x: %.2f, angular_z: %.2f'%(output_cmd_vel_msgs.linear.x, output_cmd_vel_msgs.angular.z))
             # Publish Data
             self.follow_vel_pub_.publish(output_cmd_vel_msgs)
             # Log Data

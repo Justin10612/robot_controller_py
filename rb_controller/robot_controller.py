@@ -96,7 +96,7 @@ class RobotController(Node):
             elif self.robot_state == 'FOLLOW' and self.target_status == False:
                 if round(time.time(), 0) == self.timer1:
                     self.robot_state = 'IDLE'
-                self.get_logger().info('TIME count: "%f"' % (round(time.time(), 2)-self.timer0))
+                # self.get_logger().info('TIME count: "%f"' % (round(time.time(), 2)-self.timer0))
             # Go back to Idel Mode
             if self.idle_btn_state == True:
                 self.robot_state = 'IDLE'

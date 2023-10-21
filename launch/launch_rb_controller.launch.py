@@ -38,6 +38,6 @@ def generate_launch_description():
     # Launch them all!
     return LaunchDescription([
         robot_controller_node,
-        human_follower_node,
+        # human_follower_node,
         twist_mux,
     ])
