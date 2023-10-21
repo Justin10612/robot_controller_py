@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-import math
+import simple_pid as PID
 
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist
@@ -9,7 +9,16 @@ from geometry_msgs.msg import Vector3
 
 class HumanFollower(Node):
     # Constant
-    #camera_fov = [86, 57] # [horizontal, vertical]
+    MIN_CHASE_DISTANCE = 50     # Unit:center-meter
+    MAX_CHASE_DISTANCE = 200    # Unit:center-meter
+    # depth pid controller constant
+    DEPTH_kp = 0
+    DEPTH_ki = 0
+    DEPTH_kd = 0
+    # angle pid controller constant
+    ANGLE_kp = 0
+    ANGLE_ki = 0
+    ANGLE_kd = 0
     # Veriable
     target_angle = 0.0
     target_depth = 0.0
@@ -25,6 +34,17 @@ class HumanFollower(Node):
         self.robot_mode_sub_  # prevent unused variable warning
         self.human_pose_sub_ = self.create_subscription(Vector3, 'human_pose', self.pose_read, 10)
         self.human_pose_sub_  # prevent unused variable warning
+        # PID controller setting
+        self.pid_angle = PID(self.ANGLE_kp, self.ANGLE_ki, self.ANGLE_kd, setpoint=0)
+        self.pid_angle.output_limits(0, 1000)
+        self.pid_depth = PID(self.DEPTH_kp, self.DEPTH_ki, self.DEPTH_kd, setpoint=0)
+        self.pid_depth.output_limits(0, 1000)
+
+    def pose_read(self, pose_msgs):
+        human_x = pose_msgs.x
+        human_depth = pose_msgs.y
+        self.target_angle = (abs(human_x-640)/640)*43 # 43 = horizontal_FOV / 2
+        self.target_depth = human_depth / 1000.0
 
     def follow_mode(self, mode_msg):
         output_cmd_vel_msgs = Twist()
@@ -36,32 +56,34 @@ class HumanFollower(Node):
         # Follow mode
         if mode_msg.data=='FOLLOW':
             # Dummy Data for Testing
-            output_cmd_vel_msgs.linear.x = 6.6
-            output_cmd_vel_msgs.angular.z = 1.1
-            # self.get_logger().info('Start Follow')
+            # output_cmd_vel_msgs.linear.x = 6.6
+            # output_cmd_vel_msgs.angular.z = 1.1
+            # Stop Zone Detect
+            if (self.target_depth < self.MIN_CHASE_DISTANCE 
+                or self.target_depth > self.MAX_CHASE_DISTANCE):
+                # In the stop zone
+                output_cmd_vel_msgs.linear.x = 0.0
+                output_cmd_vel_msgs.angular.z = 0.0
+            else:
+                # In the chasing zone
+                # PID Controller Calculation
+                output_cmd_vel_msgs.linear.x = self.pid_angle(self.target_angle)
+                output_cmd_vel_msgs.angular.z = self.pid_depth(self.target_depth)
+            # Publish Data
             self.follow_vel_pub_.publish(output_cmd_vel_msgs)
+            # Log Data
+            # self.get_logger().info('Start Follow')
         else:
             # Zeroing
             output_cmd_vel_msgs.linear.x = 0.0
             output_cmd_vel_msgs.angular.z = 0.0
+            # Publish Data
             if self.last_state != mode_msg.data:
                 self.follow_vel_pub_.publish(output_cmd_vel_msgs)
+            # Log Data
             # self.get_logger().info('Follow cmd vel Published > <')
         self.last_state = mode_msg.data
-    
-    def pose_read(self, pose_msgs):
-        human_x = pose_msgs.x
-        human_depth = pose_msgs.y
-        self.target_angle = (abs(human_x-640)/640)*43 # 43 = horizontal_FOV / 2
-        self.target_depth = human_depth / 1000.0
 
-    def PID_controller(self, target, measure, kp, ki, kd):
-        error = float(target - measure)
-        error_sum += error
-        output = kp*error + ki*error_sum + kd*(error-error_last)
-        error_last = error
-        return output
-        
 
 def main(args=None):
     rclpy.init(args=args)
