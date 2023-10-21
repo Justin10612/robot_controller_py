@@ -1,4 +1,5 @@
 import rclpy
+import time
 from rclpy.node import Node
 
 from std_msgs.msg import String
@@ -22,6 +23,9 @@ class RobotController(Node):
     follow_btn_flag = True
     teleop_btn_flag = True
     idle_btn_flag = True
+
+    timer0 = 0
+    timer1 = 0
 
     def __init__(self):
         super().__init__('robot_controller')
@@ -85,16 +89,18 @@ class RobotController(Node):
         else:
             idle_msg.data = False
             # 
-            if self.robot_state == 'FOLLOW' and self.target_status == False:
-                for i in range(50):
-                    if self.target_status: break
-                    if i==49: self.robot_state = 'IDLE'
-                    # sdd = str(i)
-                    self.get_logger().info('Count: "%d"' % i)
+            
+            if self.robot_state == 'FOLLOW' and self.target_status == True:
+                self.timer0 = round(time.time(), 0)
+                self.timer1 = self.timer0 + 5.0
+            elif self.robot_state == 'FOLLOW' and self.target_status == False:
+                if round(time.time(), 0) == self.timer1:
+                    self.robot_state = 'IDLE'
+                self.get_logger().info('TIME count: "%f"' % (round(time.time(), 2)-self.timer0))
             # Go back to Idel Mode
             if self.idle_btn_state == True:
                 self.robot_state = 'IDLE'
-    
+
         # Publish Robot_state
         mode_msg = String()
         mode_msg.data = self.robot_state
