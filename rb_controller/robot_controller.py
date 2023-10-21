@@ -89,7 +89,6 @@ class RobotController(Node):
         else:
             idle_msg.data = False
             # 
-            
             if self.robot_state == 'FOLLOW' and self.target_status == True:
                 self.timer0 = round(time.time(), 0)
                 self.timer1 = self.timer0 + 5.0
@@ -105,6 +104,7 @@ class RobotController(Node):
         mode_msg = String()
         mode_msg.data = self.robot_state
         self.robot_state_pub_.publish(mode_msg)
+        self.idle_bool_pub_.publish(idle_msg)
         # Log Robot_state
         if (self.last_robot_state != self.robot_state):
             self.get_logger().info('Robot State: "%s "' % self.robot_state)

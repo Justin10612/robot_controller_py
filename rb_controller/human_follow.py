@@ -9,10 +9,10 @@ from geometry_msgs.msg import Vector3
 
 class HumanFollower(Node):
     # Constant
-    MIN_CHASE_DISTANCE = 0.5     # Unit:center-meter
+    MIN_CHASE_DISTANCE = 0.8     # Unit:center-meter
     MAX_CHASE_DISTANCE = 2    # Unit:center-meter
     # depth pid controller constant
-    DEPTH_kp = 0.2
+    DEPTH_kp = 0.8
     DEPTH_ki = 0
     DEPTH_kd = 0
     # angle pid controller constant
@@ -67,12 +67,12 @@ class HumanFollower(Node):
             else:
                 # In the chasing zone
                 # PID Controller Calculation
-                output_cmd_vel_msgs.linear.x = float(self.pid_depth(-self.target_depth))
+                output_cmd_vel_msgs.linear.x = round(float(-self.pid_depth(self.target_depth-self.MIN_CHASE_DISTANCE)), 2)
                 # output_cmd_vel_msgs.angular.z = float(self.pid_angle(-self.target_angle))
-                self.get_logger().info('linear_x: %.2f, angular_z: %.2f'%(output_cmd_vel_msgs.linear.x, output_cmd_vel_msgs.angular.z))
             # Publish Data
             self.follow_vel_pub_.publish(output_cmd_vel_msgs)
             # Log Data
+            self.get_logger().info('linear_x: %.2f, angular_z: %.2f'%(output_cmd_vel_msgs.linear.x, output_cmd_vel_msgs.angular.z))
             # self.get_logger().info('Start Follow')
         else:
             # Zeroing
