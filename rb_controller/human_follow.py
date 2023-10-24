@@ -1,20 +1,21 @@
 import rclpy
 from rclpy.node import Node
-from simple_pid import PID
+# from simple_pid import PID
 
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import Vector3
 
-
 class HumanFollower(Node):
     # Constant
-    MIN_CHASE_DISTANCE = 0.8     # Unit:center-meter
-    MAX_CHASE_DISTANCE = 2    # Unit:center-meter
+    MIN_CHASE_DISTANCE = 0.6     # Unit:center-meter
+    MAX_CHASE_DISTANCE = 2.5    # Unit:center-meter
+    MAX_VEL_OUTPUT = 1.2
     # depth pid controller constant
-    DEPTH_kp = 0.8
+    DEPTH_kp = 0.9
     DEPTH_ki = 0
-    DEPTH_kd = 0
+    DEPTH_kd = 0.1
+    depth_error1 = 0
     # angle pid controller constant
     ANGLE_kp = 0
     ANGLE_ki = 0
@@ -23,7 +24,8 @@ class HumanFollower(Node):
     target_angle = 0.0
     target_depth = 0.0
     last_state = ''
-
+    # Message
+    output_cmd_vel_msgs = Twist()
 
     def __init__(self):
         super().__init__('human_follower')
@@ -35,52 +37,43 @@ class HumanFollower(Node):
         self.human_pose_sub_ = self.create_subscription(Vector3, 'human_pose', self.pose_read, 10)
         self.human_pose_sub_  # prevent unused variable warning
         # PID controller setting
-        # self.pid_angle = PID(self.ANGLE_kp, self.ANGLE_ki, self.ANGLE_kd, setpoint=0)
-        # self.pid_angle.output_limits = (-1000, 1000)
-        self.pid_depth = PID(self.DEPTH_kp, self.DEPTH_ki, self.DEPTH_kd, setpoint=0)
-        # self.pid_depth.output_limits = (-1000, 1000)
 
     def pose_read(self, pose_msgs):
         human_x = pose_msgs.x
-        # human_depth = 
-        self.target_angle = (abs(human_x-640)/640)*43 # 43 = horizontal_FOV / 2
+        # self.target_angle = (abs(human_x-640)/640)*43 # 43 = horizontal_FOV / 2
         self.target_depth = pose_msgs.y
 
     def follow_mode(self, mode_msg):
-        output_cmd_vel_msgs = Twist()
-        # Make sure other veriables are zero
-        # output_cmd_vel_msgs.linear.y = 0.0
-        # output_cmd_vel_msgs.linear.z = 0.0
-        # output_cmd_vel_msgs.angular.x = 0.0
-        # output_cmd_vel_msgs.angular.y = 0.0
         # Follow mode
         if mode_msg.data=='FOLLOW':
-            # Dummy Data for Testing
-            # output_cmd_vel_msgs.linear.x = 6.6
-            # output_cmd_vel_msgs.angular.z = 1.1
             # Stop Zone Detect
-            if (self.target_depth < self.MIN_CHASE_DISTANCE 
-                or self.target_depth > self.MAX_CHASE_DISTANCE):
+            if self.target_depth > self.MAX_CHASE_DISTANCE :
                 # In the stop zone
-                output_cmd_vel_msgs.linear.x = 0.0
-                output_cmd_vel_msgs.angular.z = 0.0
+                self.output_cmd_vel_msgs.linear.x = 0.0
+                self.output_cmd_vel_msgs.angular.z = 0.0
             else:
                 # In the chasing zone
-                # PID Controller Calculation
-                output_cmd_vel_msgs.linear.x = round(float(-self.pid_depth(self.target_depth-self.MIN_CHASE_DISTANCE)), 2)
-                # output_cmd_vel_msgs.angular.z = float(self.pid_angle(-self.target_angle))
+                # DEPTH PID Controller
+                depth_error = self.target_depth - self.MIN_CHASE_DISTANCE
+                depth_pid = self.DEPTH_kp*depth_error + self.DEPTH_kd*(depth_error-self.depth_error1)
+                if depth_pid > self.MAX_VEL_OUTPUT: depth_pid = self.MAX_VEL_OUTPUT
+                if depth_pid < -self.MAX_VEL_OUTPUT: depth_pid = -self.MAX_VEL_OUTPUT
+                self.output_cmd_vel_msgs.linear.x = depth_pid
+                self.depth_error1 = depth_error
+                # ANGLE PID Controller
+                self.output_cmd_vel_msgs.angular.z = 0.0
             # Publish Data
-            self.follow_vel_pub_.publish(output_cmd_vel_msgs)
+            self.follow_vel_pub_.publish(self.output_cmd_vel_msgs)
             # Log Data
-            self.get_logger().info('linear_x: %.2f, angular_z: %.2f'%(output_cmd_vel_msgs.linear.x, output_cmd_vel_msgs.angular.z))
+            # self.get_logger().info('linear_x: %.2f, angular_z: %.2f'%(self.output_cmd_vel_msgs.linear.x, self.output_cmd_vel_msgs.angular.z))
             # self.get_logger().info('Start Follow')
         else:
-            # Zeroing
-            output_cmd_vel_msgs.linear.x = 0.0
-            output_cmd_vel_msgs.angular.z = 0.0
+            # Clean Output
+            self.output_cmd_vel_msgs.linear.x = 0.0
+            self.output_cmd_vel_msgs.angular.z = 0.0
             # Publish Data
             if self.last_state != mode_msg.data:
-                self.follow_vel_pub_.publish(output_cmd_vel_msgs)
+                self.follow_vel_pub_.publish(self.output_cmd_vel_msgs)
             # Log Data
             # self.get_logger().info('Follow cmd vel Published > <')
         self.last_state = mode_msg.data
