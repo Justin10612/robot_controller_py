@@ -2,8 +2,7 @@ import rclpy
 import time
 from rclpy.node import Node
 
-from std_msgs.msg import String
-from std_msgs.msg import Bool
+from std_msgs.msg import String, Bool, UInt8
 from sensor_msgs.msg import Joy
 
 
@@ -18,6 +17,7 @@ class RobotController(Node):
     idle_btn_state = False
     robot_state = 'IDLE'
     last_robot_state = 'IDLE'
+    led_state = 0
     target_status = False
     # Button State
     follow_btn_flag = True
@@ -32,6 +32,7 @@ class RobotController(Node):
         # Create publisher
         self.idle_bool_pub_ = self.create_publisher(Bool, 'idle_bool', 10)
         self.robot_state_pub_ = self.create_publisher(String, 'robot_mode', 10)
+        self.led_state_pub_ = self.create_publisher(UInt8, 'led_state', 10)
         # Create subscriber
         self.joy_sub_ = self.create_subscription(Joy, 'joy', self.button_read, 10)
         self.joy_sub_  # prevent unused variable warning
@@ -75,17 +76,20 @@ class RobotController(Node):
         else:
             self.teleop_btn_state = False
 
-        # ############## FSM ##############
+        ############## FSM ##############
         idle_msg = Bool()
         if self.robot_state=='IDLE' :
             # Mux Cut-off Output, Switch to E-STOP
             idle_msg.data = True
+            self.led_state = 0
             # Switch to Follow Mode
             if self.follow_btn_state==True and self.target_status==True:
                 self.robot_state = 'FOLLOW'
+                self.led_state = 1
             # Switch to Teleoperating Mode
             if self.teleop_btn_state==True:
                 self.robot_state = 'TELEOP'
+                self.led_state = 2
         else:
             idle_msg.data = False
             # 
@@ -104,6 +108,11 @@ class RobotController(Node):
         mode_msg = String()
         mode_msg.data = self.robot_state
         self.robot_state_pub_.publish(mode_msg)
+        # Publish LED states
+        led_msg = UInt8()
+        led_msg.data = self.led_state
+        self.led_state_pub_.publish(led_msg)
+        # Publish Idle message
         self.idle_bool_pub_.publish(idle_msg)
         # Log Robot_state
         if (self.last_robot_state != self.robot_state):

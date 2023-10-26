@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-# from simple_pid import PID
+import matplotlib.pyplot as plt
 
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist
@@ -20,6 +20,7 @@ class HumanFollower(Node):
     ANGLE_kp = 0
     ANGLE_ki = 0
     ANGLE_kd = 0
+    angle_error1 = 0 
     # Veriable
     target_angle = 0.0
     target_depth = 0.0
@@ -52,7 +53,7 @@ class HumanFollower(Node):
                 self.output_cmd_vel_msgs.linear.x = 0.0
                 self.output_cmd_vel_msgs.angular.z = 0.0
             else:
-                # In the chasing zone
+                # In the chasing zone #
                 # DEPTH PID Controller
                 depth_error = self.target_depth - self.MIN_CHASE_DISTANCE
                 depth_pid = self.DEPTH_kp*depth_error + self.DEPTH_kd*(depth_error-self.depth_error1)
@@ -61,7 +62,12 @@ class HumanFollower(Node):
                 self.output_cmd_vel_msgs.linear.x = depth_pid
                 self.depth_error1 = depth_error
                 # ANGLE PID Controller
-                self.output_cmd_vel_msgs.angular.z = 0.0
+                # angle_error = self.target_angle
+                # angle_pid = self.ANGLE_kp*angle_error + self.ANGLE_kd*(angle_error-self.angle_error1)
+                # if angle_pid > self.MAX_VEL_OUTPUT: angle_pid = self.MAX_VEL_OUTPUT
+                # if angle_pid < -self.MAX_VEL_OUTPUT: angle_pid = -self.MAX_VEL_OUTPUT
+                # self.output_cmd_vel_msgs.angular.z = angle_pid
+                # self.angle_error1 = angle_error
             # Publish Data
             self.follow_vel_pub_.publish(self.output_cmd_vel_msgs)
             # Log Data
