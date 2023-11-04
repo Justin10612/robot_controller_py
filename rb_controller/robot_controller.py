@@ -2,7 +2,8 @@ import rclpy
 import time
 from rclpy.node import Node
 
-from std_msgs.msg import String, Bool, UInt32
+from std_msgs.msg import String, Bool, Int32
+from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Joy
 
 
@@ -17,7 +18,7 @@ class RobotController(Node):
     idle_btn_state = False
     robot_state = 'IDLE'
     last_robot_state = 'IDLE'
-    led_state = 0
+    led_state = 0.0
     target_status = False
     # Button State
     follow_btn_flag = True
@@ -32,7 +33,7 @@ class RobotController(Node):
         # Create publisher
         self.idle_bool_pub_ = self.create_publisher(Bool, 'idle_bool', 10)
         self.robot_state_pub_ = self.create_publisher(String, 'robot_mode', 10)
-        self.led_state_pub_ = self.create_publisher(UInt32, 'led_state', 10)
+        self.led_state_pub_ = self.create_publisher(Int32, 'led_state', 10)
         # Create subscriber
         self.joy_sub_ = self.create_subscription(Joy, 'joy', self.button_read, 10)
         self.joy_sub_  # prevent unused variable warning
@@ -92,7 +93,7 @@ class RobotController(Node):
                 self.led_state = 2
         else:
             idle_msg.data = False
-            # Set Start Time (To calculate target lost)
+            # Set Start Time (To calculate the time of target lost)
             if self.robot_state == 'FOLLOW' and self.target_status == True:
                 self.timer0 = round(time.time(), 0)
                 self.timer1 = self.timer0 + 5.0
@@ -110,7 +111,7 @@ class RobotController(Node):
         mode_msg.data = self.robot_state
         self.robot_state_pub_.publish(mode_msg)
         # Publish LED states
-        led_msg = UInt32()
+        led_msg = Int32()
         led_msg.data = self.led_state
         self.led_state_pub_.publish(led_msg)
         # Publish Idle message
