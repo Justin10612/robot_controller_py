@@ -11,15 +11,14 @@ class HumanFollower(Node):
     MIN_CHASE_DISTANCE = 0.8     # Unit:center-meter
     MAX_CHASE_DISTANCE = 3    # Unit:center-meter
     MAX_LINEAR_VEL_OUTPUT = 1.2
-    MAX_ANGULER_VEL_OUTPUT = 1.3
+    MAX_ANGULER_VEL_OUTPUT = 2.5
     # depth pid controller constant
     DEPTH_kp = 0.98
     DEPTH_kd = 0.1
     depth_error1 = 0
     # angle pid controller constant
-    ANGLE_kp = 0.01 
-    ANGLE_ki = 0
-    ANGLE_kd = 0
+    ANGLE_kp = 0.08
+    ANGLE_kd = 0.08
     angle_error1 = 0 
     # Veriable
     target_angle = 0.0
@@ -42,7 +41,7 @@ class HumanFollower(Node):
 
     def pose_read(self, pose_msgs):
         human_x = pose_msgs.x
-        self.target_angle = (human_x-640)*0.067 # 43 = horizontal_FOV / 2
+        self.target_angle = round((human_x-640)*0.07, 2) # 43 = horizontal_FOV / 2
         self.target_depth = pose_msgs.y
         self.target_state = pose_msgs.z
 
@@ -70,7 +69,7 @@ class HumanFollower(Node):
                 # ANGLE PID Controller
                 self.get_logger().info('Angle:%fdegree'%self.target_angle)
                 angle_error = self.target_angle
-                angle_pid = self.ANGLE_kp*angle_error + self.ANGLE_kd*(angle_error-self.angle_error1)
+                angle_pid = -self.ANGLE_kp*angle_error + self.ANGLE_kd*(angle_error-self.angle_error1)
                 if angle_pid > self.MAX_ANGULER_VEL_OUTPUT: angle_pid = self.MAX_ANGULER_VEL_OUTPUT
                 if angle_pid < -self.MAX_ANGULER_VEL_OUTPUT: angle_pid = -self.MAX_ANGULER_VEL_OUTPUT
                 self.output_cmd_vel_msgs.angular.z = angle_pid
