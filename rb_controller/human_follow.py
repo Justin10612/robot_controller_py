@@ -10,13 +10,14 @@ class HumanFollower(Node):
     # Constant
     MIN_CHASE_DISTANCE = 0.8     # Unit:center-meter
     MAX_CHASE_DISTANCE = 3    # Unit:center-meter
-    MAX_VEL_OUTPUT = 1.2
+    MAX_LINEAR_VEL_OUTPUT = 1.2
+    MAX_ANGULER_VEL_OUTPUT = 1.3
     # depth pid controller constant
-    DEPTH_kp = 0.95
+    DEPTH_kp = 0.98
     DEPTH_kd = 0.1
     depth_error1 = 0
     # angle pid controller constant
-    ANGLE_kp = 0
+    ANGLE_kp = 0.01 
     ANGLE_ki = 0
     ANGLE_kd = 0
     angle_error1 = 0 
@@ -41,14 +42,14 @@ class HumanFollower(Node):
 
     def pose_read(self, pose_msgs):
         human_x = pose_msgs.x
-        # self.target_angle = (abs(human_x-640)/640)*43 # 43 = horizontal_FOV / 2
+        self.target_angle = (human_x-640)*0.067 # 43 = horizontal_FOV / 2
         self.target_depth = pose_msgs.y
         self.target_state = pose_msgs.z
 
     def follow_mode(self, mode_msg):
         # Follow mode
         if mode_msg.data=='FOLLOW':
-            self.get_logger().info('State: %f'%self.target_state)
+            # self.get_logger().info('State: %f'%self.target_state)
             self.follow_flag = True
             # Stop Zone Detect
             if self.target_depth > self.MAX_CHASE_DISTANCE or self.target_state==0.0:
@@ -58,21 +59,22 @@ class HumanFollower(Node):
             else:
                 # In the chasing zone #
                 # DEPTH PID Controller
-                depth_error = self.target_depth - self.MIN_CHASE_DISTANCE
-                depth_pid = self.DEPTH_kp*depth_error + self.DEPTH_kd*(depth_error-self.depth_error1)
-                if depth_pid > self.MAX_VEL_OUTPUT:
-                    depth_pid = self.MAX_VEL_OUTPUT
-                if depth_pid < -self.MAX_VEL_OUTPUT:
-                    depth_pid = -self.MAX_VEL_OUTPUT
-                self.depth_error1 = depth_error
-                self.output_cmd_vel_msgs.linear.x = depth_pid
+                # depth_error = self.target_depth - self.MIN_CHASE_DISTANCE
+                # depth_pid = self.DEPTH_kp*depth_error + self.DEPTH_kd*(depth_error-self.depth_error1)
+                # if depth_pid > self.MAX_LINEAR_VEL_OUTPUT:
+                #     depth_pid = self.MAX_LINEAR_VEL_OUTPUT
+                # if depth_pid < -self.MAX_LINEAR_VEL_OUTPUT:
+                #     depth_pid = -self.MAX_LINEAR_VEL_OUTPUT
+                # self.depth_error1 = depth_error
+                # self.output_cmd_vel_msgs.linear.x = depth_pid
                 # ANGLE PID Controller
-                # angle_error = self.target_angle
-                # angle_pid = self.ANGLE_kp*angle_error + self.ANGLE_kd*(angle_error-self.angle_error1)
-                # if angle_pid > self.MAX_VEL_OUTPUT: angle_pid = self.MAX_VEL_OUTPUT
-                # if angle_pid < -self.MAX_VEL_OUTPUT: angle_pid = -self.MAX_VEL_OUTPUT
-                # self.output_cmd_vel_msgs.angular.z = angle_pid
-                # self.angle_error1 = angle_error
+                self.get_logger().info('Angle:%fdegree'%self.target_angle)
+                angle_error = self.target_angle
+                angle_pid = self.ANGLE_kp*angle_error + self.ANGLE_kd*(angle_error-self.angle_error1)
+                if angle_pid > self.MAX_ANGULER_VEL_OUTPUT: angle_pid = self.MAX_ANGULER_VEL_OUTPUT
+                if angle_pid < -self.MAX_ANGULER_VEL_OUTPUT: angle_pid = -self.MAX_ANGULER_VEL_OUTPUT
+                self.output_cmd_vel_msgs.angular.z = angle_pid
+                self.angle_error1 = angle_error
             # Publish Data
             self.follow_vel_pub_.publish(self.output_cmd_vel_msgs)
             # Log Data
@@ -86,8 +88,6 @@ class HumanFollower(Node):
             if self.follow_flag == True:
                 self.follow_vel_pub_.publish(self.output_cmd_vel_msgs)
                 self.follow_flag = False
-        # self.last_state = mode_msg.data
-
 
 def main(args=None):
     rclpy.init(args=args)
