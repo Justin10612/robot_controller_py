@@ -26,6 +26,11 @@ def generate_launch_description():
         executable="human_follower",
     )
     
+    pid_pub_node = Node(
+        package=package_name,
+        executable="motor_pid_pub",
+    )
+
     twist_mux = Node(
             package="twist_mux",
             executable="twist_mux",
@@ -40,4 +45,5 @@ def generate_launch_description():
         robot_controller_node,
         human_follower_node,
         twist_mux,
+        # pid_pub_node,
     ])

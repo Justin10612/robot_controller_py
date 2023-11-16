@@ -8,17 +8,17 @@ from geometry_msgs.msg import Vector3
 
 class HumanFollower(Node):
     # Constant
-    MIN_CHASE_DISTANCE = 0.8     # Unit:center-meter
-    MAX_CHASE_DISTANCE = 3    # Unit:center-meter
+    MIN_CHASE_DISTANCE = 0.6     # Unit:center-meter
+    MAX_CHASE_DISTANCE = 3.0    # Unit:center-meter
     MAX_LINEAR_VEL_OUTPUT = 1.2
-    MAX_ANGULER_VEL_OUTPUT = 2.5
+    MAX_ANGULER_VEL_OUTPUT = 3.0
     # depth pid controller constant
     DEPTH_kp = 0.98
-    DEPTH_kd = 0.1
+    DEPTH_kd = 0.40
     depth_error1 = 0
     # angle pid controller constant
-    ANGLE_kp = 0.08
-    ANGLE_kd = 0.08
+    ANGLE_kp = 0
+    ANGLE_kd = 0
     angle_error1 = 0 
     # Veriable
     target_angle = 0.0
@@ -41,39 +41,36 @@ class HumanFollower(Node):
 
     def pose_read(self, pose_msgs):
         human_x = pose_msgs.x
-        self.target_angle = round((human_x-640)*0.07, 2) # 43 = horizontal_FOV / 2
-        self.target_depth = pose_msgs.y
         self.target_state = pose_msgs.z
+        if self.target_state == 1.0:
+            self.target_angle = round((human_x-640)*0.07, 2) # 43 = horizontal_FOV / 2
+            self.target_depth = pose_msgs.y
 
     def follow_mode(self, mode_msg):
         # Follow mode
         if mode_msg.data=='FOLLOW':
-            # self.get_logger().info('State: %f'%self.target_state)
             self.follow_flag = True
             # Stop Zone Detect
-            if self.target_depth > self.MAX_CHASE_DISTANCE or self.target_state==0.0:
+            if self.target_depth > self.MAX_CHASE_DISTANCE:
                 # In the stop zone
                 self.output_cmd_vel_msgs.linear.x = 0.0
                 self.output_cmd_vel_msgs.angular.z = 0.0
             else:
                 # In the chasing zone #
                 # DEPTH PID Controller
-                # depth_error = self.target_depth - self.MIN_CHASE_DISTANCE
-                # depth_pid = self.DEPTH_kp*depth_error + self.DEPTH_kd*(depth_error-self.depth_error1)
-                # if depth_pid > self.MAX_LINEAR_VEL_OUTPUT:
-                #     depth_pid = self.MAX_LINEAR_VEL_OUTPUT
-                # if depth_pid < -self.MAX_LINEAR_VEL_OUTPUT:
-                #     depth_pid = -self.MAX_LINEAR_VEL_OUTPUT
-                # self.depth_error1 = depth_error
-                # self.output_cmd_vel_msgs.linear.x = depth_pid
+                depth_error = self.target_depth - self.MIN_CHASE_DISTANCE
+                depth_pid = self.PD_Controller(depth_error, self.depth_error1, self.MAX_LINEAR_VEL_OUTPUT, self.DEPTH_kp, self.DEPTH_kd)
+                self.depth_error1 = depth_error
+                self.output_cmd_vel_msgs.linear.x = depth_pid
                 # ANGLE PID Controller
                 self.get_logger().info('Angle:%fdegree'%self.target_angle)
-                angle_error = self.target_angle
-                angle_pid = -self.ANGLE_kp*angle_error + self.ANGLE_kd*(angle_error-self.angle_error1)
-                if angle_pid > self.MAX_ANGULER_VEL_OUTPUT: angle_pid = self.MAX_ANGULER_VEL_OUTPUT
-                if angle_pid < -self.MAX_ANGULER_VEL_OUTPUT: angle_pid = -self.MAX_ANGULER_VEL_OUTPUT
-                self.output_cmd_vel_msgs.angular.z = angle_pid
+                if abs(self.target_angle)<5:
+                    angle_error = 0
+                else:
+                    angle_error = -self.target_angle
+                angle_pid = self.PD_Controller(angle_error, self.angle_error1, self.MAX_ANGULER_VEL_OUTPUT, self.DEPTH_kp, self.ANGLE_kd)
                 self.angle_error1 = angle_error
+                self.output_cmd_vel_msgs.angular.z = angle_pid
             # Publish Data
             self.follow_vel_pub_.publish(self.output_cmd_vel_msgs)
             # Log Data
@@ -87,6 +84,14 @@ class HumanFollower(Node):
             if self.follow_flag == True:
                 self.follow_vel_pub_.publish(self.output_cmd_vel_msgs)
                 self.follow_flag = False
+
+    def PD_Controller(self, error, error1, max, kp, kd):
+        output = kp*error + kd*(error-error1)
+        if output > max:
+            output = max
+        if output < -self.MAX_LINEAR_VEL_OUTPUT:
+            output = -max
+        return output
 
 def main(args=None):
     rclpy.init(args=args)
