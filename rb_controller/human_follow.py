@@ -1,20 +1,20 @@
 import rclpy
 from rclpy.node import Node
-import matplotlib.pyplot as plt
-
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import Vector3
 
 class HumanFollower(Node):
-    # Constant
-    MIN_CHASE_DISTANCE = 0.6     # Unit:center-meter
-    MAX_CHASE_DISTANCE = 3.0    # Unit:center-meter
+    # Depth Distance Constant
+    MAX_CHASE_DISTANCE = 3.0    # Unit:meter
+    MIN_CHASE_DISTANCE = 1     # Unit:meter
+    MIN_SKID_DISTANCE = 0.8
     MAX_LINEAR_VEL_OUTPUT = 1.2
+    # Angle 
     MAX_ANGULER_VEL_OUTPUT = 3.0
     # depth pid controller constant
-    DEPTH_kp = 0.98
-    DEPTH_kd = 0.40
+    DEPTH_kp = 1.66
+    DEPTH_kd = 0
     depth_error1 = 0
     # angle pid controller constant
     ANGLE_kp = 0
@@ -49,33 +49,42 @@ class HumanFollower(Node):
     def follow_mode(self, mode_msg):
         # Follow mode
         if mode_msg.data=='FOLLOW':
+            # Log Data
+            self.get_logger().info('Start Follow')
             self.follow_flag = True
             # Stop Zone Detect
-            if self.target_depth > self.MAX_CHASE_DISTANCE:
+            if (self.target_depth > self.MAX_CHASE_DISTANCE):
                 # In the stop zone
                 self.output_cmd_vel_msgs.linear.x = 0.0
                 self.output_cmd_vel_msgs.angular.z = 0.0
-            else:
-                # In the chasing zone #
+            elif(self.target_depth > self.MIN_CHASE_DISTANCE or self.target_depth < self.MIN_SKID_DISTANCE):
+                # In the Chasing Zone #
                 # DEPTH PID Controller
                 depth_error = self.target_depth - self.MIN_CHASE_DISTANCE
                 depth_pid = self.PD_Controller(depth_error, self.depth_error1, self.MAX_LINEAR_VEL_OUTPUT, self.DEPTH_kp, self.DEPTH_kd)
                 self.depth_error1 = depth_error
                 self.output_cmd_vel_msgs.linear.x = depth_pid
                 # ANGLE PID Controller
-                self.get_logger().info('Angle:%fdegree'%self.target_angle)
+                # self.get_logger().info('Angle:%fdegree'%self.target_angle)
                 if abs(self.target_angle)<5:
                     angle_error = 0
                 else:
                     angle_error = -self.target_angle
-                angle_pid = self.PD_Controller(angle_error, self.angle_error1, self.MAX_ANGULER_VEL_OUTPUT, self.DEPTH_kp, self.ANGLE_kd)
+                angle_pid = self.PD_Controller(angle_error, self.angle_error1, self.MAX_ANGULER_VEL_OUTPUT, self.ANGLE_kp, self.ANGLE_kd)
+                self.angle_error1 = angle_error
+                self.output_cmd_vel_msgs.angular.z = angle_pid
+            else:
+                # ANGLE PID Controller
+                self.output_cmd_vel_msgs.linear.x = 0
+                if abs(self.target_angle)<5:
+                    angle_error = 0
+                else:
+                    angle_error = -self.target_angle
+                angle_pid = self.PD_Controller(angle_error, self.angle_error1, self.MAX_ANGULER_VEL_OUTPUT, self.ANGLE_kp, self.ANGLE_kd)
                 self.angle_error1 = angle_error
                 self.output_cmd_vel_msgs.angular.z = angle_pid
             # Publish Data
             self.follow_vel_pub_.publish(self.output_cmd_vel_msgs)
-            # Log Data
-            # self.get_logger().info('linear_x: %.2f, angular_z: %.2f'%(self.output_cmd_vel_msgs.linear.x, self.output_cmd_vel_msgs.angular.z))
-            # self.get_logger().info('Start Follow')
         else:
             # Clean Output
             self.output_cmd_vel_msgs.linear.x = 0.0
@@ -91,7 +100,7 @@ class HumanFollower(Node):
             output = max
         if output < -self.MAX_LINEAR_VEL_OUTPUT:
             output = -max
-        return output
+        return output*1.0
 
 def main(args=None):
     rclpy.init(args=args)

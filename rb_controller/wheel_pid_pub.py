@@ -26,7 +26,6 @@ class WheelPidPublisher(Node):
 
     def publish_pid(self, msg):
         # Publish Robot_state
-        z = msg.data
         pid_msg = Twist()
         # left
         pid_msg.linear.x = self.l_kp
