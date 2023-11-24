@@ -7,18 +7,18 @@ from geometry_msgs.msg import Vector3
 class HumanFollower(Node):
     # Depth Distance Constant
     MAX_CHASE_DISTANCE = 3.0    # Unit:meter
-    MIN_CHASE_DISTANCE = 1     # Unit:meter
-    MIN_SKID_DISTANCE = 0.8
-    MAX_LINEAR_VEL_OUTPUT = 1.2
-    # Angle 
-    MAX_ANGULER_VEL_OUTPUT = 3.0
+    MIN_CHASE_DISTANCE = 0.8     # Unit:meter
+    MIN_SKID_DISTANCE = 0.5
+    MAX_LINEAR_VEL_OUTPUT = 1.5
     # depth pid controller constant
-    DEPTH_kp = 1.66
-    DEPTH_kd = 0
+    DEPTH_kp = 2.0
+    DEPTH_kd = 0.5
     depth_error1 = 0
+    # Angle 
+    MAX_ANGULER_VEL_OUTPUT = 2
     # angle pid controller constant
-    ANGLE_kp = 0
-    ANGLE_kd = 0
+    ANGLE_kp = 0.5
+    ANGLE_kd = 0.25
     angle_error1 = 0 
     # Veriable
     target_angle = 0.0
@@ -43,16 +43,15 @@ class HumanFollower(Node):
         human_x = pose_msgs.x
         self.target_state = pose_msgs.z
         if self.target_state == 1.0:
-            self.target_angle = round((human_x-640)*0.07, 2) # 43 = horizontal_FOV / 2
+            self.target_angle = round((human_x-640)*0.0122, 2) # 43 = horizontal_FOV / 2
             self.target_depth = pose_msgs.y
 
     def follow_mode(self, mode_msg):
         # Follow mode
         if mode_msg.data=='FOLLOW':
             # Log Data
-            self.get_logger().info('Start Follow')
+            # self.get_logger().info('Start Follow')
             self.follow_flag = True
-            # Stop Zone Detect
             if (self.target_depth > self.MAX_CHASE_DISTANCE):
                 # In the stop zone
                 self.output_cmd_vel_msgs.linear.x = 0.0
@@ -60,13 +59,13 @@ class HumanFollower(Node):
             elif(self.target_depth > self.MIN_CHASE_DISTANCE or self.target_depth < self.MIN_SKID_DISTANCE):
                 # In the Chasing Zone #
                 # DEPTH PID Controller
-                depth_error = self.target_depth - self.MIN_CHASE_DISTANCE
-                depth_pid = self.PD_Controller(depth_error, self.depth_error1, self.MAX_LINEAR_VEL_OUTPUT, self.DEPTH_kp, self.DEPTH_kd)
-                self.depth_error1 = depth_error
-                self.output_cmd_vel_msgs.linear.x = depth_pid
+                # depth_error = self.target_depth - self.MIN_CHASE_DISTANCE
+                # depth_pid = self.PD_Controller(depth_error, self.depth_error1, self.MAX_LINEAR_VEL_OUTPUT, self.DEPTH_kp, self.DEPTH_kd)
+                # self.depth_error1 = depth_error
+                # self.output_cmd_vel_msgs.linear.x = depth_pid
                 # ANGLE PID Controller
                 # self.get_logger().info('Angle:%fdegree'%self.target_angle)
-                if abs(self.target_angle)<5:
+                if abs(self.target_angle)<1.5:
                     angle_error = 0
                 else:
                     angle_error = -self.target_angle
@@ -74,9 +73,10 @@ class HumanFollower(Node):
                 self.angle_error1 = angle_error
                 self.output_cmd_vel_msgs.angular.z = angle_pid
             else:
+                # In the Skid Zone
+                self.output_cmd_vel_msgs.linear.x = 0.0
                 # ANGLE PID Controller
-                self.output_cmd_vel_msgs.linear.x = 0
-                if abs(self.target_angle)<5:
+                if abs(self.target_angle)<1.5:
                     angle_error = 0
                 else:
                     angle_error = -self.target_angle

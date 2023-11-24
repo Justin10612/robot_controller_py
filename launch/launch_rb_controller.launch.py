@@ -25,11 +25,6 @@ def generate_launch_description():
         package=package_name,
         executable="human_follower",
     )
-    
-    pid_pub_node = Node(
-        package=package_name,
-        executable="motor_pid_pub",
-    )
 
     twist_mux = Node(
             package="twist_mux",
@@ -37,7 +32,7 @@ def generate_launch_description():
             parameters=[
                 {'use_sim_time': False},
                 twist_mux_params],
-            remappings=[('/cmd_vel_out','/diff_cont/cmd_vel_unstamped')]
+            # remappings=[('/cmd_vel_out','/diff_cont/cmd_vel_unstamped')]
     )
 
     # Launch them all!
@@ -45,5 +40,4 @@ def generate_launch_description():
         robot_controller_node,
         human_follower_node,
         twist_mux,
-        # pid_pub_node,
     ])
