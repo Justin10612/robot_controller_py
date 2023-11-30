@@ -26,7 +26,8 @@ setup(
         'console_scripts': [
             'robot_controller = rb_controller.robot_controller:main',
             'human_follower = rb_controller.human_follow:main',
-            'motor_pid_pub = rb_controller.wheel_pid_pub:main'
+            'motor_pid_pub = rb_controller.wheel_pid_pub:main',
+            'depth_kalman = rb_controller.depth_kalman:main'
         ],
     },
 )
