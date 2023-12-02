@@ -70,7 +70,7 @@ class DepthKalman(Node):
         self.robot_mode_sub_  # prevent unused variable warning
 
         # Create KalmanFilter object
-        dt = 0.1
+        dt = 0.03
         # Your matrices
         # 3*3
         A = np.array([[1, dt],
@@ -80,10 +80,10 @@ class DepthKalman(Node):
         # 3*3
         Q = np.diag([0.05, 0])
         # 1
-        R = np.array([[0.3]])
+        R = np.array([[0.15]])
         # 3*3
-        P = np.array([[0.2, 0], 
-                      [0, 0.2]])
+        P = np.array([[0.6, 0], 
+                      [0, 0.4]])
         self.kf = KalmanFilter(dt, A, C, Q, R, P)
 
         x0 = np.array([0.8, 0])
