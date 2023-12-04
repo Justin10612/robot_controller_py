@@ -80,7 +80,7 @@ class DepthKalman(Node):
         # 3*3
         Q = np.diag([0.20, 0])
         # 1
-        R = np.array([[0.15]])
+        R = np.array([[0.20]])
         # 3*3
         P = np.array([[0.6, 0], 
                       [0, 0.4]])
@@ -94,7 +94,7 @@ class DepthKalman(Node):
         pub_msg = Float64()
         pub__raw_msg = Float64()
         # Raw Depth
-        depth = (msg.y)/1000.0
+        depth = (msg.y)
         # Publish Raw depth
         pub__raw_msg.data = float(depth)
         self.raw_depth_pub_.publish(pub__raw_msg)
@@ -103,6 +103,8 @@ class DepthKalman(Node):
         if s<=0:
             s=0.0
         pub_msg.data =s
+        if s>=2.5:
+            s=3.0
         # publish data
         self.depth_pub_.publish(pub_msg)
 
