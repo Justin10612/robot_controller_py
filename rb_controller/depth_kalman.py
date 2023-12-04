@@ -78,7 +78,7 @@ class DepthKalman(Node):
         # 1*3
         C = np.array([[1, 0]])
         # 3*3
-        Q = np.diag([0.05, 0])
+        Q = np.diag([0.1, 0])
         # 1
         R = np.array([[0.15]])
         # 3*3
