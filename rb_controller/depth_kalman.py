@@ -63,8 +63,8 @@ class DepthKalman(Node):
     def __init__(self):
         super().__init__('depth_kalman')
         # Create publisher
-        self.motor_pid_pub_ = self.create_publisher(Float64, 'depth', 10)
-        self.depth_pub_ = self.create_publisher(Float64, 'depth_raw', 10)
+        self.depth_pub_ = self.create_publisher(Float64, 'depth', 10)
+        self.raw_depth_pub_ = self.create_publisher(Float64, 'depth_raw', 10)
         # Create subscriber
         self.robot_mode_sub_ = self.create_subscription(Vector3, 'human_pose', self.depth_callback, 10)
         self.robot_mode_sub_  # prevent unused variable warning
@@ -78,7 +78,7 @@ class DepthKalman(Node):
         # 1*3
         C = np.array([[1, 0]])
         # 3*3
-        Q = np.diag([0.1, 0])
+        Q = np.diag([0.20, 0])
         # 1
         R = np.array([[0.15]])
         # 3*3
@@ -90,27 +90,22 @@ class DepthKalman(Node):
         self.kf.init(x0=x0)
 
     def depth_callback(self, msg):
-        depth = (msg.y)/1000.0
-        # Publish Robot_state
-        # self.lista.append(depth)
-        # self.ian += 1
-        # if self.ian==20:
-        #     self.ian=0
-        #     self.get_logger().info("Cov:%f"%np.cov(self.lista))
-        #     self.lista= []
+        # Declare Msgs
         pub_msg = Float64()
         pub__raw_msg = Float64()
+        # Raw Depth
+        depth = (msg.y)/1000.0
+        # Publish Raw depth
         pub__raw_msg.data = float(depth)
+        self.raw_depth_pub_.publish(pub__raw_msg)
         x_hat, t = self.kf.update(depth)
-        s = round(float(x_hat[0]), 1)
+        s = round(float(x_hat[0]), 2)
         if s<=0:
             s=0.0
         pub_msg.data =s
-        # s = depth/1000.0
         # publish data
-        # self.get_logger().info("estimate: '%f'"%s)
-        self.motor_pid_pub_.publish(pub_msg)
-        self.depth_pub_.publish(pub__raw_msg)
+        self.depth_pub_.publish(pub_msg)
+
 
 def main(args=None):
     rclpy.init(args=args)
