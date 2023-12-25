@@ -1,112 +1,43 @@
 import rclpy
 import numpy as np
 from rclpy.node import Node
+import math
 
 from std_msgs.msg import Float64
-from geometry_msgs.msg import Vector3
-
-class KalmanFilter:
-
-    def __init__(self, dt, A, C, Q, R, P):
-        self.A = A
-        self.C = C
-        self.Q = Q
-        self.R = R
-        self.P = P
-        self.K = np.zeros_like(P)
-        self.P0 = P
-        self.m, self.n = C.shape
-        self.t0 = 0
-        self.t = 0
-        self.dt = dt
-        self.initialized = False
-        self.I = np.eye(self.n)
-        self.x_hat = np.zeros((self.n, 1))
-        self.x_hat_new = np.zeros((self.n, 1))
-
-    def init(self, t0=0, x0=None):
-        self.t0 = t0
-        self.t = t0
-        self.x_hat = x0 if x0 is not None else np.zeros((self.n, 1))
-        self.P = self.P0
-        self.initialized = True
-
-    def update(self, y, dt=None, A=None):
-        if not self.initialized:
-            raise Exception("Filter not initialized!")
-
-        if dt is None:
-            dt = self.dt
-        if A is None:
-            A = self.A
-
-        # Prediction
-        x_hat_minus = A @ self.x_hat
-        P_minus = A @ self.P @ A.T + self.Q
-
-        # Update
-        S = self.C @ P_minus @ self.C.T + self.R
-        self.K = P_minus @ self.C.T @ np.linalg.inv(S)
-        self.x_hat_new = x_hat_minus + self.K @ (y - self.C @ x_hat_minus)
-        self.P = (self.I - self.K @ self.C) @ P_minus
-
-        # Update time and state
-        self.t += dt
-        self.x_hat = self.x_hat_new
-
-        return self.x_hat.flatten(), self.t
+from geometry_msgs.msg import Vector3, PoseStamped
 
 class DepthKalman(Node):
-    lista =[]
-    ian = 0
+    # 
+    last_x = 0.0
+    last_y = 0.0
     
     def __init__(self):
         super().__init__('depth_kalman')
         # Create publisher
-        self.depth_pub_ = self.create_publisher(Float64, 'depth', 10)
+        self.target_pose_pub_ = self.create_publisher(PoseStamped, 'target_pose', 10)
         self.raw_depth_pub_ = self.create_publisher(Float64, 'depth_raw', 10)
         # Create subscriber
         self.robot_mode_sub_ = self.create_subscription(Vector3, 'human_pose', self.depth_callback, 10)
         self.robot_mode_sub_  # prevent unused variable warning
 
-        # Create KalmanFilter object
-        dt = 0.03
-        # Your matrices
-        # 3*3
-        A = np.array([[1, dt],
-                      [1, 0]])
-        # 1*3
-        C = np.array([[1, 0]])
-        # 3*3
-        Q = np.diag([0.20, 0])
-        # 1
-        R = np.array([[0.20]])
-        # 3*3
-        P = np.array([[0.6, 0], 
-                      [0, 0.4]])
-        self.kf = KalmanFilter(dt, A, C, Q, R, P)
-
-        x0 = np.array([0.8, 0])
-        self.kf.init(x0=x0)
-
-    def depth_callback(self, msg):
-        # Declare Msgs
-        pub_msg = Float64()
-        pub__raw_msg = Float64()
-        # Raw Depth
-        depth = (msg.y)
-        # Publish Raw depth
-        pub__raw_msg.data = float(depth)
-        self.raw_depth_pub_.publish(pub__raw_msg)
-        x_hat, t = self.kf.update(depth)
-        s = round(float(x_hat[0]), 2)
-        if s<=0:
-            s=0.0
-        pub_msg.data =s
-        if s>=2.5:
-            s=3.0
-        # publish data
-        self.depth_pub_.publish(pub_msg)
+    def depth_callback(self, human_pose_msg):
+        # input
+        x_pixel = human_pose_msg.x
+        target_radian = (x_pixel-640)*0.001225
+        depth = max(min(human_pose_msg.y, 2.5), 0)
+        target_state = human_pose_msg.z
+        # Cal to Pose2D
+        target_pose2D = PoseStamped()
+        target_pose2D.header.frame_id = 'base_link'
+        if target_state==1.0:
+            target_pose2D._pose.position.x = depth
+            target_pose2D.pose.position.y = depth*math.tan(target_radian)
+            self.last_x = depth
+            self.last_y = depth*math.tan(target_radian)
+        else:
+            target_pose2D._pose.position.x = self.last_x
+            target_pose2D.pose.position.y =  self.last_y
+        self.target_pose_pub_.publish(target_pose2D)
 
 
 def main(args=None):
