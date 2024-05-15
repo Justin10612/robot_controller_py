@@ -2,7 +2,7 @@ from setuptools import setup
 from glob import glob
 import os
 
-package_name = 'rb_controller'
+package_name = 'robot_controller_py'
 
 setup(
     name=package_name,
